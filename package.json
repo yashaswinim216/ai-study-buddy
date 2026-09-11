@@ -1,7 +1,7 @@
 {
   "name": "ai-study-buddy",
   "version": "1.0.0",
-  "description": "AI-powered student utility app: summarize notes, generate quizzes, and explain concepts simply using Gemini 2.5 Flash.",
+  "description": "AI-powered student utility app: summarize notes, generate quizzes, and explain concepts simply using Google Gemini.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
