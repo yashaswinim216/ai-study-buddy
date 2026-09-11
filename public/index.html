@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Study Buddy — Smarter studying with Gemini</title>
+  <meta name="description" content="Summarize lecture notes, generate practice quizzes, and get simple explanations powered by Google Gemini." />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Markdown rendering + escaping -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+
+  <script>
+    // Tailwind CDN config: brand colors + font
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef4ff', 100: '#dce7fd', 200: '#c0d3fb', 300: '#94b6f8',
+              400: '#618ef3', 500: '#3d66ed', 600: '#2847e1', 700: '#2036ce',
+              800: '#202ea7', 900: '#1f2d84', 950: '#171e50',
+            },
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* Custom scrollbar for the output area */
+    .output-scroll::-webkit-scrollbar { width: 8px; }
+    .output-scroll::-webkit-scrollbar-track { background: transparent; }
+    .output-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+
+    /* Markdown output styling */
+    .md-output h2 { font-size: 1.05rem; font-weight: 700; color: #1f2d84; margin: 1rem 0 0.4rem; }
+    .md-output h2:first-child { margin-top: 0; }
+    .md-output ul { list-style: disc; padding-left: 1.25rem; margin: 0.4rem 0; }
+    .md-output li { margin: 0.25rem 0; color: #334155; }
+    .md-output p { margin: 0.4rem 0; color: #334155; }
+    .md-output strong { color: #0f172a; }
+    .md-output code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 0.25rem; font-size: 0.85em; }
+    .md-output em { color: #475569; }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/60 to-indigo-100 font-sans text-slate-800">
+
+  <!-- ======================= HEADER ======================= -->
+  <header class="pt-10 pb-6 text-center px-4">
+    <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-400 shadow-lg shadow-brand-600/30 mb-4">
+      <!-- Graduation cap icon -->
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
+      </svg>
+    </div>
+    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">AI Study Buddy</h1>
+    <p class="mt-2 text-slate-500 max-w-md mx-auto text-sm sm:text-base">
+      Paste your lecture notes and let Gemini summarize them, quiz you, or explain the hard parts simply.
+    </p>
+  </header>
+
+  <!-- ======================= MAIN CARD ======================= -->
+  <main class="px-4 pb-16 flex justify-center">
+    <div class="w-full max-w-3xl bg-white rounded-2xl shadow-xl shadow-slate-900/5 ring-1 ring-slate-900/5 p-6 sm:p-8 space-y-6">
+
+      <!-- Step 1: Notes input -->
+      <section aria-labelledby="notes-label">
+        <div class="flex items-center justify-between mb-2">
+          <label for="notes-input" id="notes-label" class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-brand-600 text-white text-[11px] font-bold flex items-center justify-center">1</span>
+            Your notes
+          </label>
+          <span id="char-counter" class="text-xs text-slate-400 tabular-nums">0 / 20,000 characters</span>
+        </div>
+        <textarea
+          id="notes-input"
+          rows="7"
+          maxlength="20000"
+          placeholder="Paste your lecture notes, textbook excerpt, or article text here… (at least 20 characters)"
+          class="w-full rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm text-slate-800 placeholder-slate-400 resize-y
+                 focus:outline-none focus:ring-2 focus:ring-brand-500/60 focus:border-brand-400 focus:bg-white transition"
+        ></textarea>
+      </section>
+
+      <!-- Step 2: Mode selector -->
+      <section aria-labelledby="mode-label">
+        <span id="mode-label" class="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-2">
+          <span class="w-5 h-5 rounded-full bg-brand-600 text-white text-[11px] font-bold flex items-center justify-center">2</span>
+          What should I do?
+        </span>
+        <div id="mode-selector" class="grid grid-cols-1 sm:grid-cols-3 gap-2" role="group" aria-label="Utility mode">
+          <button type="button" data-mode="summarize" aria-pressed="true"
+            class="mode-btn px-4 py-3 rounded-xl text-sm font-medium border transition text-left
+                   border-brand-500 bg-brand-50 text-brand-800 ring-1 ring-brand-500">
+            📝 Summarize Notes
+          </button>
+          <button type="button" data-mode="quiz" aria-pressed="false"
+            class="mode-btn px-4 py-3 rounded-xl text-sm font-medium border transition text-left
+                   border-slate-200 bg-white text-slate-600 hover:border-slate-300">
+            ❓ Generate Quiz
+          </button>
+          <button type="button" data-mode="explain" aria-pressed="false"
+            class="mode-btn px-4 py-3 rounded-xl text-sm font-medium border transition text-left
+                   border-slate-200 bg-white text-slate-600 hover:border-slate-300">
+            💡 Explain Simply
+          </button>
+        </div>
+      </section>
+
+      <!-- Step 3: Generate button -->
+      <section>
+        <button
+          id="generate-btn"
+          class="w-full py-3.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-white font-semibold text-sm
+                 shadow-lg shadow-brand-600/30 hover:from-brand-700 hover:to-brand-600 active:scale-[0.99] transition
+                 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center justify-center gap-2"
+        >
+          <svg id="spinner" class="hidden animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"></path>
+          </svg>
+          <span id="btn-label">✨ Generate</span>
+        </button>
+      </section>
+
+      <!-- Error box (hidden by default) -->
+      <div id="error-box" class="hidden" role="alert">
+        <div class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+          <p id="error-message" class="text-sm text-red-700 font-medium"></p>
+        </div>
+      </div>
+
+      <!-- Output display area -->
+      <section id="output-section" class="hidden" aria-live="polite">
+        <div class="rounded-xl border border-slate-200 overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+            <h2 id="output-title" class="text-xs font-semibold uppercase tracking-wider text-slate-500">Result</h2>
+            <button id="copy-btn"
+              class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-brand-700 transition px-2 py-1 rounded-md hover:bg-slate-100">
+              <svg id="copy-icon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 5.625v-1.5c0-1.478-.666-2.8-1.72-3.684" />
+              </svg>
+              <span id="copy-label">Copy to Clipboard</span>
+            </button>
+          </div>
+          <div id="output-display" class="md-output output-scroll p-4 sm:p-5 max-h-[28rem] overflow-y-auto text-sm leading-relaxed"></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="pb-8 text-center text-xs text-slate-400">
+    Built with Node.js, Express &amp; Google Gemini · Your notes are sent to the AI only when you press Generate.
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
